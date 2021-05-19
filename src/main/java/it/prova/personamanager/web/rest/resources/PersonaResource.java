@@ -1,7 +1,9 @@
 package it.prova.personamanager.web.rest.resources;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import it.prova.personamanager.model.Persona;
 import it.prova.personamanager.service.MyServiceFactory;
 import it.prova.personamanager.service.PerosnaService;
@@ -24,6 +26,8 @@ public class PersonaResource {
 	HttpServletRequest request;
 
 	private PerosnaService personaService;
+
+	ObjectMapper objectMapper = new ObjectMapper();
 
 	public PersonaResource() {
 		personaService = MyServiceFactory.getPersonaServiceInstance();
@@ -81,23 +85,21 @@ public class PersonaResource {
 	@GET
 	@Path("/search")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response searchPersona(@QueryParam("nome") String nome, @QueryParam("cognome") String cognome) {
+	public Response searchPersona(Persona personaExample) throws JsonProcessingException {
 		LOGGER.info("Verbo Http.........................." + request.getMethod());
 		Persona example = new Persona();
-		example.setNome(nome);
-		example.setCognome(cognome);
+		example.setNome(personaExample.getNome());
+		example.setCognome(personaExample.getCognome());
+		example.setDataNascita(personaExample.getDataNascita());
 		List<Persona> result = null;
-		String risultato = null;
+
 		try {
-			result = MyServiceFactory.getPersonaServiceInstance().findByExample(example);
-			ObjectMapper objectMapper = new ObjectMapper();
-			DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm a z");
-			objectMapper.setDateFormat(df);
-			risultato = objectMapper.writeValueAsString(result);
+
+			result = personaService.findByExample(example);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return Response.status(200).entity(risultato).build();
+		return Response.status(200).entity(convertDateList(result)).build();
 	}
 
 	@DELETE
@@ -125,6 +127,13 @@ public class PersonaResource {
 			e.printStackTrace();
 		}
 		return Response.status(200).entity(personaInput).build();
+	}
+
+	private String convertDateList(List<Persona> persone) throws JsonProcessingException {
+
+		objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+		String json = objectMapper.writeValueAsString(persone);
+		return json;
 	}
 	
 }
